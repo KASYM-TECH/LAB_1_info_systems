@@ -1,0 +1,19 @@
+.main {
+    gap: 20px;
+    height: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+}
+
+.main > *:last-child {
+    grid-column: span 2;
+}
+
+@media screen and (max-width: 762px){
+    .main{
+        grid-template-columns: 1fr;
+    }
+    .main > *:last-child {
+        grid-column: span 1;
+    }
+}

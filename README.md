@@ -1,0 +1,1 @@
+# web_lab4_1042 <a href="https://www.codefactor.io/repository/github/pizhikcoder/web_lab4_1042"><img src="https://www.codefactor.io/repository/github/pizhikcoder/web_lab4_1042/badge" alt="CodeFactor" /></a>

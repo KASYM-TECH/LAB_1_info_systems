@@ -1,0 +1,58 @@
+.main {
+    display: flex;
+    justify-items: center;
+    height: 100vh;
+    position: relative;
+}
+
+.header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    text-align: center;
+    width: 100%;
+    font-size: 20pt;
+    font-weight: bold;
+    background: black;
+    color: white;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+.form {
+    background: black;
+    padding: 30px;
+    border-radius: 50px;
+    margin: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.form input {
+    border-radius: 15px;
+    padding: 10px;
+    font-size: 16pt;
+    border: 1px solid white;
+    color: black;
+    background: white;
+}
+
+.form input[type="submit"]{
+    cursor: pointer;
+}
+
+.form input[type="submit"]:hover {
+    background: black;
+    color: white;
+}
+
+.error {
+    color: red;
+    font-size: 16pt;
+    margin: 5px 0;
+}
+
+.form input[type="text"]:focus, .form input[type="password"]:focus {
+    outline: 2px solid cyan;
+    box-shadow: 1px 1px 15px 1px cyan;
+}
