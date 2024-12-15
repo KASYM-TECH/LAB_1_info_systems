@@ -41,4 +41,8 @@ public class User {
     public void setRole(Role role) throws InvalidUserCredentialsException {
         this.role = role;
     }
+
+    public boolean Validate() {
+        return true;
+    }
 }

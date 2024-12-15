@@ -1,0 +1,71 @@
+[{
+  "name": "Inception",
+  "coordinates": {
+    "x": 100,
+    "y": 200.5,
+    "allowAdminEdit": true,
+    "creatorId": 12345
+  },
+  "oscarsCount": 4,
+  "budget": 160000000.0,
+  "totalBoxOffice": 830000000.0,
+  "mpaaRating": "NC_17",
+  "director": {
+    "name": "Christopher Nolan",
+    "eyeColor": "RED",
+    "hairColor": "RED",
+    "location": {
+      "x": 12.5,
+      "y": 34,
+      "z": 56,
+      "name": "London",
+      "allowAdminEdit": true,
+      "creatorId": 12345
+    },
+    "height": 1.83,
+    "nationality": "UNITED_KINGDOM",
+    "allowAdminEdit": true,
+    "creatorId": 33
+  },
+  "screenwriter": {
+    "name": "Jonathan Nolan",
+    "eyeColor": "RED",
+    "hairColor": "RED",
+    "location": {
+      "x": 23.5,
+      "y": 45,
+      "z": 67,
+      "name": "Los Angeles",
+      "allowAdminEdit": true,
+      "creatorId": 12346
+    },
+    "height": 1.78,
+    "nationality": "UNITED_KINGDOM",
+    "allowAdminEdit": true,
+    "creatorId": 33
+  },
+  "operator": {
+    "name": "Wally Pfister",
+    "eyeColor": "RED",
+    "hairColor": "RED",
+    "location": {
+      "x": 34.5,
+      "y": 56,
+      "z": 78,
+      "name": "New York",
+      "allowAdminEdit": true,
+      "creatorId": 12347
+    },
+    "height": 1.85,
+    "nationality": "UNITED_KINGDOM",
+    "allowAdminEdit": true,
+    "creatorId": 33
+  },
+  "length": 148,
+  "goldenPalmCount": 0,
+  "tagline": "Your mind is the scene of the crime.",
+  "genre": "COMEDY",
+  "allowAdminEdit": true,
+  "creatorId": 33
+}
+]

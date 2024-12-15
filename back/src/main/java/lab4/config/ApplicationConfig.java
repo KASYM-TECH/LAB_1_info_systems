@@ -1,5 +1,7 @@
 package lab4.config;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.ValidationMode;
 import lab4.security.filter.JwtFilter;
@@ -20,6 +22,8 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
+import org.springframework.web.multipart.MultipartResolver;
+import org.springframework.web.multipart.support.StandardServletMultipartResolver;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -61,12 +65,21 @@ public class ApplicationConfig implements WebMvcConfigurer {
 
     @Bean
     public DataSource dataSource() {
-        final DriverManagerDataSource driver = new DriverManagerDataSource();
-        driver.setDriverClassName(DB_DRIVER);
-        driver.setUrl(DB_URL);
-        driver.setUsername(USERNAME);
-        driver.setPassword(PASSWORD);
-        return driver;
+        // HikariCP Configuration
+        HikariConfig config = new HikariConfig();
+        config.setDriverClassName(DB_DRIVER);
+        config.setJdbcUrl(DB_URL);
+        config.setUsername(USERNAME);
+        config.setPassword(PASSWORD);
+
+        // Connection pool limits
+        config.setMinimumIdle(5);              // Minimum idle connections
+        config.setMaximumPoolSize(100);         // Maximum number of connections in the pool
+        config.setIdleTimeout(30000);          // Timeout for idle connections (ms)
+        config.setMaxLifetime(1800000);        // Max lifetime of a connection (ms)
+        config.setConnectionTimeout(30000);    // Timeout for getting a connection (ms)
+
+        return new HikariDataSource(config);
     }
 
     @Bean
@@ -122,4 +135,6 @@ public class ApplicationConfig implements WebMvcConfigurer {
     public JwtFilter getJWTAuthFilter() {
         return new JwtFilter();
     }
+
+
 }

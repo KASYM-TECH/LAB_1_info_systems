@@ -1,5 +1,7 @@
 package lab4.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lab4.database.entity.Coordinates;
 import lab4.database.entity.Location;
 import lab4.database.entity.Person;
@@ -19,8 +21,11 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -40,7 +45,7 @@ public class LocationService {
         return locationRepository.findById(id).orElseThrow(() -> new Exception("Location not found"));
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
     public Location updateLocation(Long id, Location updatedLocation, String token) throws Exception {
         var location = locationRepository.findById(id).orElseThrow();
         var userRole = jwtService.getUserRoleFromToken(token);
@@ -63,7 +68,7 @@ public class LocationService {
         return locationRepository.save(location);
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public void replaceWith(Long id, Long replaceWithId) {
         if(Objects.equals(id, replaceWithId)) {
             return ;
@@ -83,6 +88,28 @@ public class LocationService {
 
         Page<Location> coordinatesPage = locationRepository.findAll(spec, pageRequest);
         return coordinatesPage.getContent();
+    }
+
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    public int insertLocations(List<Location> locationsList) {
+        var count = 0;
+        for (Location location : locationsList) {
+            if (!location.Validate()) {
+                return -1;
+            }
+            count++;
+        }
+        locationRepository.saveAll(locationsList);
+        return count;
+    }
+
+    public List<Location> uploadJsonFile(MultipartFile file) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            return objectMapper.readValue(file.getInputStream(), new TypeReference<List<Location>>() {});
+        } catch (IOException e) {
+            return null;
+        }
     }
 }
 

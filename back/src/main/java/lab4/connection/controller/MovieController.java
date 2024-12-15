@@ -7,6 +7,7 @@ import lab4.database.entity.enums.MovieGenre;
 import lab4.database.entity.enums.MpaaRating;
 import lab4.service.MovieService;
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,9 +22,14 @@ public class MovieController {
 
     @PostMapping()
     public ResponseEntity<Movie> createMovie(@RequestBody Movie movie) {
-        var res = ResponseEntity.ok(movieService.createMovie(movie));
-        webSocketController.update("");
-        return res;
+        try {
+            var res = ResponseEntity.ok(movieService.createMovie(movie));
+            webSocketController.update("");
+            return res;
+        }catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(null);
+        }
     }
 
     @GetMapping
@@ -54,10 +60,15 @@ public class MovieController {
 
 
     @PutMapping("/{id}")
-    public ResponseEntity<Movie> updateMovie(@PathVariable Long id, @RequestBody Movie movie, HttpServletRequest request) throws Exception {
-        var movieUpdated = ResponseEntity.ok(movieService.updateMovie(id, movie, request.getHeader("Authorization")));
-        webSocketController.update("");
-        return movieUpdated;
+    public ResponseEntity<Movie> updateMovie(@PathVariable Long id, @RequestBody Movie movie, HttpServletRequest request) {
+        try {
+            var movieUpdated = ResponseEntity.ok(movieService.updateMovie(id, movie, request.getHeader("Authorization")));
+            webSocketController.update("");
+            return movieUpdated;
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(null);
+        }
     }
 
     @DeleteMapping("/{id}")

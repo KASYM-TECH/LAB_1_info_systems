@@ -1,11 +1,10 @@
 package lab4.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
-import lab4.database.entity.Coordinates;
-import lab4.database.entity.GroupByTotalBoxOffice;
-import lab4.database.entity.Movie;
-import lab4.database.entity.Person;
+import lab4.database.entity.*;
 import lab4.database.entity.enums.MovieGenre;
 import lab4.database.entity.enums.MpaaRating;
 import lab4.database.entity.enums.Role;
@@ -14,19 +13,21 @@ import lab4.database.repository.MovieRepository;
 import lab4.database.repository.specifications.MovieSpecifications;
 import lab4.database.repository.PersonRepository;
 import lab4.exception.ForbiddenException;
+import lab4.exception.UniqueConstraintException;
 import lab4.security.jwt.service.IJwtService;
 import lombok.AllArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 @AllArgsConstructor
@@ -39,49 +40,64 @@ public class MovieService {
     private EntityManager entityManager;
     private IJwtService jwtService;
 
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    public Movie createMovie(Movie movie) throws UniqueConstraintException {
+        try {
 
-    @Transactional
-    public Movie createMovie(Movie movie) {
-        movie.setCreationDate(ZonedDateTime.now());
+            var existingWithName = movieRepository.findByName(movie.getName());
+            if (existingWithName != null) {
+                throw new UniqueConstraintException();
+            }
 
-        // Обработка поля Coordinates
-        if (movie.getCoordinates() != null && movie.getCoordinates().getId() != 0) {
-            Optional<Coordinates> existingCoordinates = coordinatesRepository.findById(movie.getCoordinates().getId());
-            existingCoordinates.ifPresent(movie::setCoordinates);
+            movie.setCreationDate(ZonedDateTime.now());
+
+            // Обработка поля Coordinates
+            if (movie.getCoordinates() != null && movie.getCoordinates().getId() != 0) {
+                Optional<Coordinates> existingCoordinates = coordinatesRepository.findById(movie.getCoordinates().getId());
+                existingCoordinates.ifPresent(movie::setCoordinates);
+            }
+
+            // Обработка поля Director (Person)
+            if (movie.getDirector() != null && movie.getDirector().getId() != 0) {
+                Optional<Person> existingDirector = personRepository.findById(movie.getDirector().getId());
+                existingDirector.ifPresent(movie::setDirector);
+            }
+
+            // Обработка поля Screenwriter (Person)
+            if (movie.getScreenwriter() != null && movie.getScreenwriter().getId() != 0) {
+                Optional<Person> existingScreenwriter = personRepository.findById(movie.getScreenwriter().getId());
+                existingScreenwriter.ifPresent(movie::setScreenwriter);
+            }
+
+            // Обработка поля Operator (Person)
+            if (movie.getOperator() != null && movie.getOperator().getId() != 0) {
+                Optional<Person> existingOperator = personRepository.findById(movie.getOperator().getId());
+                existingOperator.ifPresent(movie::setOperator);
+            }
+
+            entityManager.merge(movie.getCoordinates());
+            entityManager.merge(movie.getDirector());
+            entityManager.merge(movie.getScreenwriter());
+            entityManager.merge(movie.getOperator());
+
+            return movieRepository.save(movie);
+
+        } catch (DataIntegrityViolationException e) {
+            throw new UniqueConstraintException();
         }
-
-        // Обработка поля Director (Person)
-        if (movie.getDirector() != null && movie.getDirector().getId() != 0) {
-            Optional<Person> existingDirector = personRepository.findById(movie.getDirector().getId());
-            existingDirector.ifPresent(movie::setDirector);
-        }
-
-        // Обработка поля Screenwriter (Person)
-        if (movie.getScreenwriter() != null && movie.getScreenwriter().getId() != 0) {
-            Optional<Person> existingScreenwriter = personRepository.findById(movie.getScreenwriter().getId());
-            existingScreenwriter.ifPresent(movie::setScreenwriter);
-        }
-
-        // Обработка поля Operator (Person)
-        if (movie.getOperator() != null && movie.getOperator().getId() != 0) {
-            Optional<Person> existingOperator = personRepository.findById(movie.getOperator().getId());
-            existingOperator.ifPresent(movie::setOperator);
-        }
-
-        entityManager.merge(movie.getCoordinates());
-        entityManager.merge(movie.getDirector());
-        entityManager.merge(movie.getScreenwriter());
-        entityManager.merge(movie.getOperator());
-
-        return movieRepository.save(movie);
     }
 
     public Optional<Movie> getMovieById(Long id) {
         return movieRepository.findById(id);
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public Movie updateMovie(Long id, Movie updatedMovie, String token) throws Exception {
+        var existingWithName = movieRepository.findByName(updatedMovie.getName());
+        if (existingWithName != null && !Objects.equals(existingWithName.getId(), id)) {
+            throw new UniqueConstraintException();
+        }
+
         var movie = movieRepository.findById(id).orElseThrow();
         var userId = jwtService.getUserIdFromToken(token);
         var role = jwtService.getUserRoleFromToken(token);
@@ -200,4 +216,76 @@ public class MovieService {
     public long zeroOscarCountByGenre(MovieGenre genre) {
          return movieRepository.zeroOscarCountByGenre(genre.toString());
     }
+
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    public int insertMovies(List<Movie> moviesList) {
+        try {
+            var count = 0;
+            for (Movie movie : moviesList) {
+                if (!movie.Validate()) {
+                    return -1;
+                }
+                count++;
+                if(movie.getDirector() != null) {
+                    if (!movie.getDirector().Validate()) {
+                        return -1;
+                    }
+                    personService.createPerson(movie.getDirector());
+                    count++;
+                    if(movie.getDirector().getLocation() != null) {
+                        if (!movie.getDirector().getLocation().Validate()) {
+                            return -1;
+                        }
+                        count++;
+                    }
+                }
+                if(movie.getCoordinates() != null) {
+                    if (!movie.getCoordinates().Validate()) {
+                        return -1;
+                    }
+                    count++;
+                }
+                if(movie.getScreenwriter() != null) {
+                    if (!movie.getScreenwriter().Validate()) {
+                        return -1;
+                    }
+                    personService.createPerson(movie.getScreenwriter());
+                    count++;
+                    if(movie.getScreenwriter().getLocation() != null) {
+                        if (!movie.getScreenwriter().getLocation().Validate()) {
+                            return -1;
+                        }
+                        count++;
+                    }
+                }
+                if(movie.getOperator() != null) {
+                    if (!movie.getOperator().Validate()) {
+                        return -1;
+                    }
+                    personService.createPerson(movie.getOperator());
+                    count++;
+                    if(movie.getOperator().getLocation() != null) {
+                        if (!movie.getOperator().getLocation().Validate()) {
+                            return -1;
+                        }
+                        count++;
+                    }
+                }
+            }
+            movieRepository.saveAll(moviesList);
+            return count;
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    public List<Movie> uploadJsonFile(MultipartFile file) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            return objectMapper.readValue(file.getInputStream(), new TypeReference<List<Movie>>() {});
+        } catch (IOException e) {
+            return null;
+        }
+    }
 }
+

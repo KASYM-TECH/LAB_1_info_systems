@@ -27,4 +27,8 @@ public class Location {
 
     @Column(nullable = false)
     private long creatorId;
+
+    public boolean Validate() {
+        return true;
+    }
 }

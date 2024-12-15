@@ -40,5 +40,7 @@ public class Person {
         return this.id;
     }
 
-    // Getters, Setters, and Constructors
+    public boolean Validate() {
+        return true;
+    }
 }

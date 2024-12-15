@@ -1,6 +1,7 @@
 package lab4.service;
 
 import lab4.connection.controller.WebSocketController;
+import lab4.database.entity.Person;
 import lab4.database.entity.RoleRequest;
 import lab4.database.entity.User;
 import lab4.database.entity.enums.Role;
@@ -77,5 +78,15 @@ public class UserService implements IUserService {
         if(fetchedRoleRequest.getRole() == Role.Admin){
             webSocketController.update(String.valueOf(fetchedRoleRequest.getUser().getId()));
         }
+    }
+
+    @Transactional
+    public void insertUsers(List<User> userList) {
+        for (User user : userList) {
+            if (!user.Validate()) {
+                throw new IllegalArgumentException("Validation failed for user: " + user);
+            }
+        }
+        userRepository.saveAll(userList);
     }
 }

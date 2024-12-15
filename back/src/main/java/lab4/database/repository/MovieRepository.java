@@ -40,4 +40,6 @@ public interface MovieRepository extends JpaRepository<Movie, Long>, JpaSpecific
 
     @Query(value = "SELECT get_all_movies_with_no_oscars()", nativeQuery = true)
     List<Long> getAllWithNoOscars();
+
+    Movie findByName(String name);
 }

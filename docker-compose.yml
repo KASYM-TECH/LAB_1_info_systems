@@ -25,6 +25,8 @@ services:
       POSTGRES_DB: postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "54321:5432"
 
   frontend:
     image: tim/lab1-front

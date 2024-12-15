@@ -11,5 +11,7 @@ public interface PersonRepository extends JpaRepository<Person, Long>, JpaSpecif
     @Modifying
     @Query(value = "UPDATE person SET location_id=:replace_id WHERE location_id=:id", nativeQuery = true)
     void replaceLocation(@Param("id") Long id, @Param("replace_id") Long replaceId);
+
+    Person findByName(String name);
 }
 

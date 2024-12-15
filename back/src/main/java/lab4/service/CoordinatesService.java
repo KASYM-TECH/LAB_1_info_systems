@@ -1,5 +1,7 @@
 package lab4.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lab4.database.entity.Coordinates;
 import lab4.database.entity.enums.Role;
 import lab4.database.repository.CoordinatesRepository;
@@ -12,8 +14,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 
@@ -36,7 +41,7 @@ public class CoordinatesService {
         return coordinatesRepository.findAll();
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
     public Coordinates updateCoordinates(Long id, Coordinates updatedCoordinates, String token) throws Exception {
         var coordinates = coordinatesRepository.findById(id).stream().findFirst().orElseThrow();
         var userRole = jwtService.getUserRoleFromToken(token);
@@ -57,7 +62,7 @@ public class CoordinatesService {
         return coordinatesRepository.save(coordinates);
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public void replaceCoordinates(Long id, Long toReplaceId) {
         if(Objects.equals(id, toReplaceId)) {
             return ;
@@ -70,6 +75,28 @@ public class CoordinatesService {
         PageRequest pageRequest = PageRequest.of(pageNumber, pageSize, Sort.by(sortByField));
         Page<Coordinates> coordinatesPage = coordinatesRepository.findAll(pageRequest);
         return coordinatesPage.getContent();
+    }
+
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    public int insertCoordinates(List<Coordinates> coordinatesList) {
+        var count = 0;
+        for (Coordinates coordinate : coordinatesList) {
+            if (!coordinate.Validate()) {
+                return -1;
+            }
+            count++;
+        }
+        coordinatesRepository.saveAll(coordinatesList);
+        return count;
+    }
+
+    public List<Coordinates> uploadJsonFile(MultipartFile file) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            return objectMapper.readValue(file.getInputStream(), new TypeReference<List<Coordinates>>() {});
+        } catch (IOException e) {
+            return null;
+        }
     }
 }
 

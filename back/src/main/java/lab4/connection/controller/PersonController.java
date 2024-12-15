@@ -5,8 +5,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import lab4.database.entity.Person;
 import lab4.database.entity.enums.Color;
 import lab4.database.entity.enums.Country;
+import lab4.exception.UniqueConstraintException;
 import lab4.service.PersonService;
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -39,17 +41,27 @@ public class PersonController {
 
     @PostMapping()
     public ResponseEntity<Person> create(@RequestBody Person person) {
-        var created = ResponseEntity.ok(personService.createPerson(person));
-        webSocketController.update("");
-        return created;
+        try {
+            var created = ResponseEntity.ok(personService.createPerson(person));
+            webSocketController.update("");
+            return created;
+        }catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(null);
+        }
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<Person> update(@PathVariable Long id, @RequestBody Person person, HttpServletRequest request) throws Exception {
-        person.setId(id);
-        var updated = ResponseEntity.ok(personService.updatePerson(person.getId(), person, request.getHeader("Authorization")));
-        webSocketController.update("");
-        return updated;
+        try {
+            person.setId(id);
+            var updated = ResponseEntity.ok(personService.updatePerson(person.getId(), person, request.getHeader("Authorization")));
+            webSocketController.update("");
+            return updated;
+        }catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(null);
+        }
     }
 
     @DeleteMapping("/{id}")

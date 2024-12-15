@@ -1,6 +1,9 @@
 package lab4.service;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.PersistenceException;
 import lab4.connection.controller.LocationController;
 import lab4.database.entity.Coordinates;
 import lab4.database.entity.Location;
@@ -16,17 +19,24 @@ import lab4.database.repository.PersonRepository;
 import lab4.database.repository.specifications.MovieSpecifications;
 import lab4.database.repository.specifications.PersonSpecifications;
 import lab4.exception.ForbiddenException;
+import lab4.exception.UniqueConstraintException;
 import lab4.security.jwt.service.IJwtService;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -42,24 +52,39 @@ public class PersonService {
     @PersistenceContext
     private EntityManager entityManager;
 
-    @Transactional
-    public Person createPerson(Person person) {
-        if (person.getLocation() != null && person.getLocation().getId() != 0) {
-            Optional<Location> existing = locationRepository.findById(person.getLocation().getId());
-            existing.ifPresent(person::setLocation);
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    public Person createPerson(Person person) throws UniqueConstraintException {
+        try {
+            var existingWithName = personRepository.findByName(person.getName());
+            if (existingWithName != null) {
+                throw new UniqueConstraintException();
+            }
+            // Check and set existing location if provided
+            if (person.getLocation() != null && person.getLocation().getId() != 0) {
+                Optional<Location> existing = locationRepository.findById(person.getLocation().getId());
+                existing.ifPresent(person::setLocation);
+                entityManager.merge(person.getLocation());
+            }
+
+            // Save person
+            return personRepository.save(person);
+
+        } catch (DataIntegrityViolationException e) {
+            throw new UniqueConstraintException();
         }
-
-        entityManager.merge(person.getLocation());
-
-        return personRepository.save(person);
     }
 
     public Person getPersonById(Long id) throws Exception {
         return personRepository.findById(id).orElseThrow(() -> new Exception("Person not found"));
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public Person updatePerson(Long id, Person updatedPerson, String token) throws Exception {
+        var existingWithName = personRepository.findByName(updatedPerson.getName());
+        if (existingWithName != null && !Objects.equals(existingWithName.getId(), id)) {
+            throw new UniqueConstraintException();
+        }
+
         var person = personRepository.findById(id).orElseThrow();
         var userRole = jwtService.getUserRoleFromToken(token);
         var userId = jwtService.getUserIdFromToken(token);
@@ -109,7 +134,7 @@ public class PersonService {
         return coordinatesPage.getContent();
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public void replaceWith(Long id, Long replaceWithId) {
         if(Objects.equals(id, replaceWithId)) return;
 
@@ -118,5 +143,37 @@ public class PersonService {
         movieRepository.replaceScreenwriter(id, replaceWithId);
 
         personRepository.deleteById(id);
+    }
+
+    @Transactional(isolation = Isolation.SERIALIZABLE)
+    public int insertPersons(List<Person> personList) {
+        try {
+            var count = 0;
+            for (Person person : personList) {
+                if (!person.Validate()) {
+                    return -1;
+                }
+                if(person.getLocation() != null) {
+                    if (!person.getLocation().Validate()) {
+                        return -1;
+                    }
+                    count++;
+                }
+                createPerson(person);
+                count++;
+            }
+            return count;
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    public List<Person> uploadJsonFile(MultipartFile file) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            return objectMapper.readValue(file.getInputStream(), new TypeReference<List<Person>>() {});
+        } catch (IOException e) {
+            return null;
+        }
     }
 }

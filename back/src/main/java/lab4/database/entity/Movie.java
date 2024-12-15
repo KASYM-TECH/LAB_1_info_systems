@@ -58,5 +58,7 @@ public class Movie {
     @Column(nullable = false)
     private long creatorId;
 
-    // Getters, Setters, and Constructors
+    public boolean Validate() {
+        return true;
+    }
 }
